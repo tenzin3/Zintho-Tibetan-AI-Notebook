@@ -1,7 +1,7 @@
 // Sample responses used when no MONLAM_API_KEY is set, so the whole UI can be
 // explored before connecting the real API. Nothing here calls Monlam.
 
-const NOTE = '_(Demo mode — add your Monlam API key to `.env` and restart to get real answers.)_';
+const NOTE = '_(Demo mode — add your Monlam API key in Settings (⚙ top right) to get real answers.)_';
 
 export function chat(question, sources, lang) {
   const names = sources.map((s, i) => `[S${i + 1}] ${s.title}`).join(', ') || 'none';
@@ -48,7 +48,7 @@ export function generate(kind, { topic, sources }) {
         ],
       };
     case 'topic':
-      return `# ${topic}\n\nThis is a sample document about **${topic}**. With your Monlam key, Melong writes a full study document on any topic you enter, which then becomes a source you can chat with and quiz yourself on.\n\n## Overview\n\nPlaceholder text.\n\n${NOTE}`;
+      return `# ${topic}\n\nThis is a sample document about **${topic}**. With your Monlam API key, Melong writes a full study document on any topic you enter, which then becomes a source you can chat with and quiz yourself on.\n\n## Overview\n\nPlaceholder text.\n\n${NOTE}`;
     case 'glossary':
       return `| Term | Meaning | Source |\n|---|---|---|\n| ཤེས་རབ། | wisdom | S1 |\n| སྙིང་རྗེ། | compassion | S1 |\n| དཔེ་ཆ། | traditional book | S1 |\n\n${NOTE}`;
     default: {
@@ -58,5 +58,5 @@ export function generate(kind, { topic, sources }) {
   }
 }
 
-export const ocr = (name) => `(Demo OCR text for “${name}”.)\n\nབོད་ཀྱི་ཡི་གེ་ནི་ལོ་རྒྱུས་རིང་པོ་ཅན་ཞིག་ཡིན། With your Monlam key, Monlam OCR extracts the real text from this image.`;
-export const stt = (name) => `(Demo transcript for “${name}”.)\n\nWith your Monlam key, Monlam speech-to-text transcribes the real audio here.`;
+export const ocr = (name) => `(Demo OCR text for “${name}”.)\n\nབོད་ཀྱི་ཡི་གེ་ནི་ལོ་རྒྱུས་རིང་པོ་ཅན་ཞིག་ཡིན། With your Monlam API key, Monlam OCR extracts the real text from this image.`;
+export const stt = (name) => `(Demo transcript for “${name}”.)\n\nWith your Monlam API key, Monlam speech-to-text transcribes the real audio here.`;

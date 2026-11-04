@@ -32,20 +32,21 @@ export function config() {
   };
 }
 
-export const isDemo = () => !config().key || env('MONLAM_DEMO') === '1';
+// key = a user's own key (from the app's Settings); falls back to MONLAM_API_KEY
+export const isDemo = (key) => !(key || config().key) || env('MONLAM_DEMO') === '1';
 
 export function publicConfig() {
   const c = config();
   return {
-    demo: isDemo(), baseUrl: c.baseUrl, chatModel: c.chatModel,
+    demo: isDemo(), hasServerKey: !!c.key, baseUrl: c.baseUrl, chatModel: c.chatModel,
     ttsModel: c.ttsModel, sttModel: c.sttModel, ocrModel: c.ocrModel,
     voices: { A: c.ttsVoice, B: c.ttsVoiceB },
   };
 }
 
-function authHeaders(extra = {}) {
+function authHeaders(key, extra = {}) {
   const c = config();
-  return { [c.authHeader]: `${c.authPrefix}${c.key}`, ...extra };
+  return { [c.authHeader]: `${c.authPrefix}${key || c.key}`, ...extra };
 }
 
 async function call(pathname, init) {
@@ -62,7 +63,7 @@ async function call(pathname, init) {
     if (res.status === 429 && /per day/i.test(body)) {
       throw Object.assign(new Error('Monlam daily request limit reached (1,000 per day for your organization). Try again tomorrow, or check Usage and Rate limits in Monlam Studio.'), { status: 429 });
     }
-    const hint = res.status === 401 || res.status === 403 ? ' — check MONLAM_API_KEY in .env'
+    const hint = res.status === 401 || res.status === 403 ? ' — check your Monlam API key (Settings in the app, or MONLAM_API_KEY)'
       : res.status === 402 ? ' — out of credits? Check Usage in Monlam Studio'
       : res.status === 404 ? ' — check the endpoint path in .env'
       : res.status === 429 ? ' — rate limit reached, wait a moment and try again' : '';
@@ -95,10 +96,10 @@ function pickText(j) {
   return '';
 }
 
-export async function chat(messages, { temperature = 0.4, maxTokens = 2048 } = {}) {
+export async function chat(messages, { temperature = 0.4, maxTokens = 2048 } = {}, key) {
   const c = config();
   const res = await call(c.chatPath, {
-    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    headers: authHeaders(key, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ model_name: c.chatModel, messages, temperature, max_tokens: maxTokens }),
   });
   const j = await res.json();
@@ -108,11 +109,11 @@ export async function chat(messages, { temperature = 0.4, maxTokens = 2048 } = {
 }
 
 // voice: 'A' / 'B' (audio overview hosts) or a Monlam voice name
-export async function tts(text, voice) {
+export async function tts(text, voice, key) {
   const c = config();
   const voice_name = voice === 'B' ? c.ttsVoiceB : VOICES.includes(voice) ? voice : c.ttsVoice;
   const res = await call(c.ttsPath, {
-    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    headers: authHeaders(key, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ text, voice_name, model_name: c.ttsModel }),
   });
   const type = res.headers.get('content-type') || '';
@@ -140,25 +141,25 @@ export async function tts(text, voice) {
   throw new Error(`TTS response had no audio: ${JSON.stringify(j).slice(0, 300)}`);
 }
 
-export async function stt(buffer, mime, filename) {
+export async function stt(buffer, mime, filename, key) {
   const c = config();
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: mime }), filename);
   form.append('language', c.sttLanguage);
   form.append('task', 'transcribe');
   form.append('model_name', c.sttModel);
-  const res = await call(c.sttPath, { headers: authHeaders(), body: form });
+  const res = await call(c.sttPath, { headers: authHeaders(key), body: form });
   const type = res.headers.get('content-type') || '';
   return (type.includes('json') ? pickText(await res.json()) : await res.text()).trim();
 }
 
-export async function ocr(buffer, mime, filename) {
+export async function ocr(buffer, mime, filename, key) {
   const c = config();
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: mime }), filename);
   form.append('lang_hint', c.ocrLang);
   form.append('model_name', c.ocrModel);
-  const res = await call(c.ocrPath, { headers: authHeaders(), body: form });
+  const res = await call(c.ocrPath, { headers: authHeaders(key), body: form });
   const type = res.headers.get('content-type') || '';
   return (type.includes('json') ? pickText(await res.json()) : await res.text()).trim();
 }

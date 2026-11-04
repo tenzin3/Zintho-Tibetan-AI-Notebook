@@ -2,19 +2,33 @@
 
 A NotebookLM-style study notebook for Tibetan, powered by Monlam AI.
 
-## Run it
+## Run it on your computer
 
 You need **Node.js 18 or newer** (https://nodejs.org). There's nothing else to install, because the app has no npm dependencies.
 
 ```bash
 cd ~/Desktop/Zintho-Tibetan-AI-Notebook
-cp .env.example .env      # then paste your key after MONLAM_API_KEY=
 npm start                 # open http://localhost:4747
 ```
 
-On a Mac you can also double-click **start.command**. The first time, right-click it and choose **Open**. If macOS says it isn't executable, run `chmod +x start.command` once.
+On a Mac you can also double-click **start.command**.
 
-If `.env` has no key, the app runs in **demo mode**: the whole UI works, but answers are samples.
+**API key:** click **⚙ Settings** in the app and paste your Monlam key. It's saved only in your browser. Alternatively, put it in `.env` as `MONLAM_API_KEY=...` and it will be used whenever no key is set in the browser. With no key at all, the app runs in **demo mode** with sample answers.
+
+## Deploy to Vercel
+
+The repo is ready for Vercel: `public/` is served as the website and `api/[route].js` runs the AI routes.
+
+1. Push this folder to GitHub (`git add . && git commit -m "Zintho" && git push`).
+2. Go to https://vercel.com/new and import the `Zintho-Tibetan-AI-Notebook` repo.
+3. Leave the settings as they are (Framework preset: **Other**; `vercel.json` handles the rest) and click **Deploy**.
+4. Open the site, click **⚙ Settings** and paste your Monlam key.
+
+**Don't add `MONLAM_API_KEY` in Vercel's Environment Variables** unless you want everyone who visits the site to use your key and your 1,000 daily requests. Without it, each visitor uses their own key from Settings.
+
+On the hosted version:
+- Notebooks are saved in each visitor's browser (IndexedDB), not on a server. Clearing browser data deletes them.
+- Uploads are limited to **3 MB per file** (a Vercel limit). PDFs are sent page by page, so long PDFs are fine. Long audio recordings must be split. Run Zintho locally for bigger files.
 
 ## Features
 
@@ -28,11 +42,11 @@ If `.env` has no key, the app runs in **demo mode**: the whole UI works, but ans
 
 A Tibetan / English switch in the top bar sets the language of AI answers. There's also light and dark mode, and a mobile layout.
 
-Notebooks are saved as JSON files in `data/notebooks/`.
+Notebooks and audio you've already played are saved in your browser (IndexedDB), so replays don't use API requests.
 
 ## Connecting the Monlam API
 
-Zintho uses the Monlam Studio API (full reference: https://api-v1.monlamai.studio/docs). Create a key under **API keys** in Monlam Studio, then paste it into `.env` after `MONLAM_API_KEY=`.
+Zintho uses the Monlam Studio API (full reference: https://api-v1.monlamai.studio/docs). Create a key under **API keys** in Monlam Studio, then paste it into **⚙ Settings** in the app.
 
 | Feature | Request |
 |---|---|
@@ -51,16 +65,18 @@ Zintho uses the Monlam Studio API (full reference: https://api-v1.monlamai.studi
 ## Project layout
 
 ```
-server.js            web server + API routes
+server.js            local web server (npm start)
+api/[route].js       the same AI routes as a Vercel serverless function
+server/handlers.js   AI routes shared by both (chat, generate, ocr, stt, tts, test)
 server/monlam.js     Monlam API adapter (the only file that talks to Monlam)
 server/prompts.js    prompts for chat and each Studio tool
 server/demo.js       sample answers for demo mode
 public/              the web app (index.html, styles.css, app.js)
-data/notebooks/      your saved notebooks
+vercel.json          Vercel config
 ```
 
 ## Notes
 
-- Your API key stays on the server and is never sent to the browser. Don't commit `.env`; it's already in `.gitignore`.
+- A key pasted in Settings is stored only in that browser's local storage and sent with each request. A key in `.env` stays on the server. Don't commit `.env`; it's already in `.gitignore`.
 - The PDF reader (pdf.js) and fonts load from a CDN, so the browser needs an internet connection.
 - Browser recordings are saved as `.webm` (Chrome) or `.m4a` (Safari). If Monlam STT rejects one format, try uploading a `.wav` or `.mp3` file instead.

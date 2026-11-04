@@ -52,8 +52,18 @@ const isTibetan = (s) => /[ༀ-࿿]/.test(s || '');
 const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 const ago = (t) => { const s = (Date.now() - t) / 1000; if (s < 60) return 'just now'; if (s < 3600) return `${Math.floor(s / 60)} min ago`; if (s < 86400) return `${Math.floor(s / 3600)} h ago`; return fmtDate(t); };
 
+/* ---------- user's own API key (saved only in this browser) ---------- */
+const KEY_STORE = 'zintho.apiKey';
+const getKey = () => { try { return localStorage.getItem(KEY_STORE) || ''; } catch { return ''; } };
+const setKey = (k) => { try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch {} };
+const hasKey = () => !!getKey() || !!S.status.hasServerKey;
+const maskKey = (k) => (k.length > 10 ? `${k.slice(0, 4)}••••••••${k.slice(-4)}` : '••••••••');
+
 async function api(url, opts = {}) {
-  const res = await fetch(url, { ...opts, headers: opts.body ? { 'Content-Type': 'application/json' } : {} });
+  const headers = opts.body ? { 'Content-Type': 'application/json' } : {};
+  const k = getKey();
+  if (k && url.startsWith('/api/')) headers['X-Monlam-Key'] = k;
+  const res = await fetch(url, { ...opts, headers });
   if (!res.ok) {
     let msg = res.statusText;
     try { msg = (await res.json()).error || msg; } catch {}
@@ -166,16 +176,63 @@ TOOL.note = { kind: 'note', label: 'Note', icon: 'note' };
 const enabledSources = () => (S.nb?.sources || []).filter((s) => s.enabled && !s.status);
 const payload = (srcs) => srcs.map((s) => ({ title: s.title, content: s.content }));
 
-/* ================= persistence ================= */
+/* ================= persistence (IndexedDB in this browser) ================= */
+const idb = (() => {
+  let dbp;
+  const open = () => (dbp ||= new Promise((resolve, reject) => {
+    const r = indexedDB.open('zintho', 1);
+    r.onupgradeneeded = () => {
+      r.result.createObjectStore('notebooks', { keyPath: 'id' });
+      r.result.createObjectStore('tts');
+    };
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  }));
+  const tx = async (store, mode, fn) => {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const t = db.transaction(store, mode);
+      const req = fn(t.objectStore(store));
+      t.oncomplete = () => resolve(req?.result);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Storage is full'));
+    });
+  };
+  return {
+    get: (st, k) => tx(st, 'readonly', (s) => s.get(k)),
+    all: (st) => tx(st, 'readonly', (s) => s.getAll()),
+    put: (st, v, k) => tx(st, 'readwrite', (s) => (k === undefined ? s.put(v) : s.put(v, k))),
+    del: (st, k) => tx(st, 'readwrite', (s) => s.delete(k)),
+  };
+})();
+
+const EMOJIS = ['📘', '📜', '🏔️', '🪷', '☸️', '🦁', '📿', '🌄', '🕯️', '🍵'];
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : uid() + uid());
+async function listNotebooks() {
+  const all = await idb.all('notebooks');
+  return all.map((nb) => ({ id: nb.id, title: nb.title, emoji: nb.emoji, updatedAt: nb.updatedAt, sourceCount: (nb.sources || []).length }))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+}
+// One-time import of notebooks saved as files by the earlier local version
+async function importLegacy() {
+  if (load('imported', false)) return;
+  try {
+    const res = await fetch('/api/notebooks');
+    if (res.ok) for (const nb of await res.json()) if (nb?.id && !(await idb.get('notebooks', nb.id))) await idb.put('notebooks', nb);
+  } catch {}
+  store('imported', true);
+}
+
 let saveTimer;
 function save(now = false) {
   if (!S.nb) return;
   clearTimeout(saveTimer);
   const nb = S.nb;
-  const doSave = () => api(`/api/notebooks/${nb.id}`, {
-    method: 'PUT',
-    body: JSON.stringify({ ...nb, sources: nb.sources.filter((s) => !s.status) }),
-  }).catch((e) => toast('Could not save: ' + e.message, 'error'));
+  const doSave = () => {
+    nb.updatedAt = new Date().toISOString();
+    const copy = JSON.parse(JSON.stringify({ ...nb, sources: nb.sources.filter((s) => !s.status) }));
+    return idb.put('notebooks', copy).catch((e) => toast('Could not save: ' + (e?.message || e), 'error'));
+  };
   if (now) return doSave();
   saveTimer = setTimeout(doSave, 400);
 }
@@ -186,14 +243,15 @@ async function route() {
   const m = location.hash.match(/^#\/nb\/([\w-]+)/);
   if (m) {
     try {
-      S.nb = await api(`/api/notebooks/${m[1]}`);
+      S.nb = await idb.get('notebooks', m[1]);
+      if (!S.nb) throw new Error('Notebook not found');
       S.nb.sources ||= []; S.nb.chat ||= []; S.nb.notes ||= [];
       S.left = { view: 'list' }; S.studio = { view: 'home' }; S.tab = S.nb.sources.length ? 'chat' : 'sources';
       renderNotebook();
     } catch (e) { toast(e.message, 'error'); location.hash = '#/'; }
   } else {
     S.nb = null;
-    S.notebooks = await api('/api/notebooks').catch(() => []);
+    S.notebooks = await listNotebooks().catch(() => []);
     renderHome();
   }
 }
@@ -209,7 +267,7 @@ function renderTopbar() {
     </button>
     ${S.nb ? `<input class="nb-title" id="nbTitle" value="${esc(S.nb.title)}" aria-label="Notebook title">` : ''}
     <div class="spacer"></div>
-    ${S.status.demo ? '<button class="demo-pill" data-act="settings" title="No API key yet">Demo mode</button>' : ''}
+    ${hasKey() ? '' : '<button class="demo-pill" data-act="settings" title="Demo mode: add your Monlam API key">Add API key</button>'}
     <div class="seg" role="group" aria-label="Output language" title="Language for AI answers">
       <button class="${S.lang === 'bo' ? 'on' : ''}" data-act="lang" data-v="bo">བོད་ཡིག</button>
       <button class="${S.lang === 'en' ? 'on' : ''}" data-act="lang" data-v="en">English</button>
@@ -239,6 +297,9 @@ function renderHome() {
         <h1>Welcome to <span class="bo">ཟིན་ཐོ།</span> Zintho</h1>
         <p>Your AI study notebook for Tibetan. Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, quizzes, mind maps and audio.</p>
       </section>
+      ${hasKey() ? '' : `<div class="callout" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:24px">
+        <span><b>Add your Monlam API key</b> to use Zintho with real AI. Until then it runs in demo mode with sample answers.</span>
+        <button class="btn accent" data-act="settings">${icon('settings', 'sm')} Add API key</button></div>`}
       <div class="home-bar">
         <h2>My notebooks</h2>
         <button class="btn primary" data-act="newnb">${icon('plus')} Create new</button>
@@ -257,7 +318,9 @@ function renderHome() {
 }
 
 async function createNotebook() {
-  const nb = await post('/api/notebooks', { title: 'Untitled notebook' });
+  const now = new Date().toISOString();
+  const nb = { id: newId(), title: 'Untitled notebook', emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], createdAt: now, updatedAt: now, sources: [], chat: [], notes: [], guide: null, audio: null };
+  await idb.put('notebooks', nb);
   location.hash = `#/nb/${nb.id}`;
   setTimeout(() => openAddSource(), 250);
 }
@@ -536,8 +599,17 @@ const player = {
   isAudioOverview() { return this.kind === 'overview' && this.queue.length > 0; },
   async fetchUrl(idx, token) {
     if (this.cache.has(idx)) return this.cache.get(idx);
-    const p = api('/api/tts', { method: 'POST', body: JSON.stringify({ text: this.queue[idx], voice: this.voices[idx] }), blob: true })
-      .then((b) => URL.createObjectURL(b));
+    const text = this.queue[idx], voice = this.voices[idx] || 'A';
+    const cacheKey = `${voice}|${text}`;
+    const p = (async () => {
+      // audio already heard is kept in this browser, so replays don't use API requests
+      let blob = await idb.get('tts', cacheKey).catch(() => null);
+      if (!blob) {
+        blob = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, voice }), blob: true });
+        idb.put('tts', blob, cacheKey).catch(() => {});
+      }
+      return URL.createObjectURL(blob);
+    })();
     this.cache.set(idx, p);
     p.catch(() => { if (token === this.token) this.cache.delete(idx); });
     return p;
@@ -634,11 +706,19 @@ const recorder = {
 };
 const extFor = (mime) => mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : mime.includes('wav') ? 'wav' : 'webm';
 
+function checkSize(blob) {
+  const max = S.status.maxUploadMB || 40;
+  if (blob.size > max * 1024 * 1024) {
+    throw new Error(`File is ${(blob.size / 1048576).toFixed(1)} MB; the limit here is ${max} MB.${S.status.hosted ? ' Split it into smaller parts, or run Zintho on your computer for bigger files.' : ''}`);
+  }
+}
 async function transcribe(blob, filename) {
+  checkSize(blob);
   const { text } = await post('/api/stt', { data: await fileToBase64(blob), mime: blob.type || 'audio/webm', filename });
   return text;
 }
 async function ocrBlob(blob, filename) {
+  checkSize(blob);
   const { text } = await post('/api/ocr', { data: await fileToBase64(blob), mime: blob.type || 'image/png', filename });
   return text;
 }
@@ -677,7 +757,6 @@ async function processFile(file) {
     if (type === 'text') finishSource(s, await file.text());
     else if (type === 'image') { progress(s, 'Reading text with Monlam OCR…'); finishSource(s, await ocrBlob(file, file.name)); }
     else if (type === 'audio') {
-      if (file.size > 40 * 1024 * 1024) throw new Error('Audio file is over 40 MB. Trim it or split it first.');
       progress(s, 'Transcribing with Monlam STT…'); finishSource(s, await transcribe(file, file.name));
     } else if (type === 'pdf') finishSource(s, await pdfToText(file, (m) => progress(s, m)));
   } catch (e) { failSource(s, e); }
@@ -701,8 +780,8 @@ async function pdfToText(file, onProgress) {
       const canvas = document.createElement('canvas');
       canvas.width = vp.width; canvas.height = vp.height;
       await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-      const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-      text = await ocrBlob(blob, `${file.name}-page${p}.png`);
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+      text = await ocrBlob(blob, `${file.name}-page${p}.jpg`);
     }
     pages.push(text.trim());
   }
@@ -830,20 +909,57 @@ async function toggleMic() {
 /* ---------- settings ---------- */
 function openSettings() {
   const st = S.status;
-  openModal('API settings', `
-    ${st.demo ? `<div class="callout"><b>Demo mode.</b> No Monlam API key is set, so answers are samples. To connect:<br>
-      1. Open the <code>.env</code> file in the Zintho folder (copy <code>.env.example</code> if it doesn't exist).<br>
-      2. Paste your key after <code>MONLAM_API_KEY=</code><br>
-      3. Restart the server (<code>npm start</code>).</div>`
-      : '<div class="callout">✓ Connected to Monlam AI. Your key stays on the server and is never sent to the browser.</div>'}
-    <dl class="kv">
-      <dt>API base URL</dt><dd>${esc(st.baseUrl)}</dd>
+  const k = getKey();
+  const state = k ? '<span style="color:var(--ok);font-weight:600">✓ Using your API key</span>'
+    : st.hasServerKey ? '<span style="color:var(--ok);font-weight:600">✓ Using the key set on the server</span>'
+    : '<span style="color:var(--accent-2);font-weight:600">No key yet: demo mode (sample answers)</span>';
+  openModal('Settings', `
+    <h3 style="margin:0 0 4px;font-size:16px">Monlam API key</h3>
+    <p class="modal-sub" style="margin-bottom:10px">${state}</p>
+    <label class="field"><span>Paste your key from Monlam Studio → API keys</span>
+      <div style="display:flex;gap:8px">
+        <input class="input" id="keyIn" type="password" autocomplete="off" spellcheck="false" placeholder="${k ? esc(maskKey(k)) : 'Your Monlam API key'}" style="font-family:ui-monospace,Menlo,monospace">
+        <button class="btn" data-act="keyshow" title="Show / hide" type="button">Show</button>
+      </div>
+    </label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="btn accent" data-act="keysave">${icon('check', 'sm')} Save key</button>
+      ${k || st.hasServerKey ? `<button class="btn" data-act="keytest">Test connection</button>` : ''}
+      ${k ? `<button class="btn ghost" data-act="keyremove">${icon('trash', 'sm')} Remove my key</button>` : ''}
+    </div>
+    <p class="modal-sub" id="keyMsg" style="min-height:22px;margin:6px 0 10px"></p>
+    <div class="callout">Your key is saved <b>only in this browser</b> on this device. It's sent with your requests to Monlam and never stored on the server. Remove it here if you use a shared computer.</div>
+    <dl class="kv" style="margin-top:18px">
       <dt>Chat model</dt><dd>${esc(st.chatModel)}</dd>
       <dt>Text-to-speech</dt><dd>${esc(st.ttsModel)}</dd>
       <dt>Speech-to-text</dt><dd>${esc(st.sttModel)}</dd>
       <dt>OCR</dt><dd>${esc(st.ocrModel)}</dd>
-    </dl>
-    <p class="modal-sub">Endpoint paths, model names and the auth header can all be changed in <code>.env</code> to match Monlam's API docs. To use Melong 2.8, set <code>MONLAM_CHAT_MODEL=melong-2.8</code>.</p>`);
+      <dt>Upload limit</dt><dd>${esc(st.maxUploadMB)} MB per file</dd>
+    </dl>`, (root) => {
+    $('#keyIn', root).addEventListener('keydown', (e) => { if (e.key === 'Enter') saveKey(); });
+    if (!k) $('#keyIn', root).focus();
+  });
+}
+
+function saveKey() {
+  const v = $('#keyIn').value.trim();
+  if (!v) { $('#keyMsg').textContent = 'Paste a key first.'; return; }
+  if (!/^[\x21-\x7e]{8,256}$/.test(v)) { $('#keyMsg').textContent = "That doesn't look like an API key (no spaces, at least 8 characters)."; return; }
+  setKey(v);
+  toast('API key saved in this browser');
+  renderTopbar(); if (!S.nb) renderHome();
+  openSettings(); testKey();
+}
+
+async function testKey() {
+  const msg = $('#keyMsg'); if (!msg) return;
+  msg.innerHTML = '<span class="spin" style="display:inline-block;vertical-align:-4px;margin-right:6px"></span>Testing (uses 1 request)…';
+  try {
+    await post('/api/test', {});
+    msg.innerHTML = '<span style="color:var(--ok);font-weight:600">✓ Connected to Monlam: the key works.</span>';
+  } catch (e) {
+    msg.innerHTML = `<span style="color:var(--bad)">✗ ${esc(e.message)}</span>`;
+  }
 }
 
 /* ================= events ================= */
@@ -861,12 +977,16 @@ document.addEventListener('click', async (e) => {
       document.documentElement.dataset.theme = next; store('theme', next); renderTopbar(); break;
     }
     case 'settings': openSettings(); break;
+    case 'keysave': saveKey(); break;
+    case 'keytest': testKey(); break;
+    case 'keyremove': setKey(''); toast('Your key was removed from this browser'); renderTopbar(); if (!S.nb) renderHome(); openSettings(); break;
+    case 'keyshow': { const i = $('#keyIn'); i.type = i.type === 'password' ? 'text' : 'password'; t.textContent = i.type === 'password' ? 'Show' : 'Hide'; break; }
     case 'newnb': createNotebook().catch((er) => toast(er.message, 'error')); break;
     case 'open': location.hash = `#/nb/${t.dataset.id}`; break;
     case 'delnb':
       e.stopPropagation();
       if (confirm('Delete this notebook and all its sources and notes?')) {
-        await api(`/api/notebooks/${t.dataset.id}`, { method: 'DELETE' });
+        await idb.del('notebooks', t.dataset.id);
         S.notebooks = S.notebooks.filter((n) => n.id !== t.dataset.id); renderHome();
       }
       break;
@@ -988,5 +1108,6 @@ new MutationObserver(() => {
 window.addEventListener('hashchange', route);
 (async () => {
   S.status = await api('/api/status').catch(() => ({ demo: true }));
+  await importLegacy();
   await route();
 })();
