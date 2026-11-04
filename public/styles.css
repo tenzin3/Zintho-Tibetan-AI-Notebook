@@ -263,19 +263,6 @@ a { color: var(--accent); }
 .explain { font-size: 13.5px; color: var(--muted); margin-top: 8px; line-height: 1.8; font-family: var(--font-bo); }
 .score { position: sticky; bottom: 0; background: var(--panel); border-top: 1px solid var(--border); padding: 10px 2px 2px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
 
-/* flashcards */
-.fc-wrap { perspective: 1200px; }
-.fc { position: relative; height: 230px; cursor: pointer; transform-style: preserve-3d; transition: transform .5s; }
-.fc.flip { transform: rotateY(180deg); }
-.fc-face {
-  position: absolute; inset: 0; backface-visibility: hidden; border-radius: 18px; display: grid; place-items: center;
-  padding: 20px; text-align: center; font-size: 19px; line-height: 1.8; font-family: var(--font-bo); border: 1px solid var(--border);
-  background: var(--panel-2); overflow: auto;
-}
-.fc-face.back { transform: rotateY(180deg); background: var(--accent-soft); font-size: 16px; }
-.fc-face small { position: absolute; top: 10px; left: 14px; font-size: 11px; color: var(--faint); font-family: var(--font); text-transform: uppercase; letter-spacing: .05em; }
-.fc-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; color: var(--muted); font-size: 13px; }
-
 /* mind map */
 .mm { overflow: auto; padding: 6px 2px 12px; }
 .mm ul { list-style: none; margin: 0; padding-left: 22px; position: relative; }

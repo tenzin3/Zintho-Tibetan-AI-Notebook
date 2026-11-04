@@ -150,18 +150,13 @@ const S = {
   chatBusy: false,
   gen: {},
   guideBusy: false,
-  fc: { i: 0, flip: false },
 };
 
 const TOOLS = [
   { kind: 'summary', label: 'Summary', bo: 'སྙིང་བསྡུས།', icon: 'summary' },
   { kind: 'study_guide', label: 'Study guide', bo: 'སློབ་སྦྱོང་ལམ་སྟོན།', icon: 'book' },
-  { kind: 'briefing', label: 'Briefing doc', bo: 'སྙན་ཞུ།', icon: 'brief' },
-  { kind: 'faq', label: 'FAQ', bo: 'དྲི་བ་རྒྱུན་མཐོང་།', icon: 'help' },
-  { kind: 'timeline', label: 'Timeline', bo: 'ལོ་རྒྱུས་རིམ་པ།', icon: 'clock' },
   { kind: 'glossary', label: 'Glossary', bo: 'ཚིག་མཛོད།', icon: 'glossary' },
   { kind: 'quiz', label: 'Quiz', bo: 'འདྲི་རྩད།', icon: 'help' },
-  { kind: 'flashcards', label: 'Flashcards', bo: 'ཤོག་བྱང་།', icon: 'cards' },
   { kind: 'mindmap', label: 'Mind map', bo: 'བསམ་བློའི་ས་ཁྲ།', icon: 'map' },
 ];
 const TOOL = Object.fromEntries(TOOLS.map((t) => [t.kind, t]));
@@ -242,7 +237,7 @@ function renderHome() {
     <div class="home"><div class="home-inner">
       <section class="hero">
         <h1>Welcome to <span class="bo">ཟིན་ཐོ།</span> Zintho</h1>
-        <p>Your AI study notebook for Tibetan. Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, quizzes, flashcards and audio.</p>
+        <p>Your AI study notebook for Tibetan. Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, quizzes, mind maps and audio.</p>
       </section>
       <div class="home-bar">
         <h2>My notebooks</h2>
@@ -490,21 +485,6 @@ function renderNoteBody(note) {
     }).join('') + `<div class="score"><span>Score: ${correct} / ${qs.length}${answered < qs.length ? ` <span style="color:var(--faint);font-weight:400">(${qs.length - answered} left)</span>` : ''}</span>
       <button class="btn" data-act="retryquiz" data-id="${note.id}">${icon('refresh', 'sm')} Retry</button></div>`;
   }
-  if (note.kind === 'flashcards') {
-    const cards = d.cards || [];
-    if (!cards.length) return '<div class="empty">No cards.</div>';
-    const i = Math.min(S.fc.i, cards.length - 1); const c = cards[i];
-    return `<div class="fc-wrap"><div class="fc ${S.fc.flip ? 'flip' : ''}" data-act="flip">
-        <div class="fc-face front"><small>Front</small>${esc(c.front)}</div>
-        <div class="fc-face back"><small>Back</small>${esc(c.back)}</div>
-      </div></div>
-      <div class="fc-nav">
-        <button class="icon-btn" data-act="fcprev" ${i === 0 ? 'disabled' : ''} title="Previous">${icon('prev')}</button>
-        <span>${i + 1} / ${cards.length} · tap card to flip</span>
-        <button class="icon-btn" data-act="fcnext" ${i === cards.length - 1 ? 'disabled' : ''} title="Next">${icon('next')}</button>
-      </div>
-      <div class="row-end"><button class="btn ghost" data-act="fcshuffle" data-id="${note.id}">${icon('shuffle', 'sm')} Shuffle</button></div>`;
-  }
   if (note.kind === 'mindmap') {
     const tree = (n, depth) => `<li>
         <button class="node ${depth === 0 ? 'root' : depth === 1 ? 'l1' : ''}" data-act="mmnode" data-t="${esc(n.title)}">
@@ -513,6 +493,7 @@ function renderNoteBody(note) {
       </li>`;
     return `<div class="mm-hint">Click a topic to ask about it in chat. Click ▾ to fold a branch.</div><div class="mm"><ul>${tree(d, 0)}</ul></div>`;
   }
+  if (typeof d !== 'string') return '<div class="empty">This note type is no longer supported.</div>';
   return `<div class="${isTibetan(d) ? 'bo' : ''}">${md(d, note.cite)}</div>`;
 }
 
@@ -530,7 +511,7 @@ async function generate(kind) {
     } else {
       const note = { id: uid(), kind, title: res.title || TOOL[kind].label, data: res.data, createdAt: Date.now(), cite: srcs.map((s) => s.id) };
       S.nb.notes.unshift(note);
-      S.studio = { view: 'note', id: note.id }; S.fc = { i: 0, flip: false };
+      S.studio = { view: 'note', id: note.id };
     }
     save();
   } catch (e) { toast(e.message, 'error'); }
@@ -939,7 +920,7 @@ document.addEventListener('click', async (e) => {
 
     // studio
     case 'gen': generate(t.dataset.kind); break;
-    case 'opennote': S.studio = { view: 'note', id: t.dataset.id }; S.fc = { i: 0, flip: false }; renderStudio(); break;
+    case 'opennote': S.studio = { view: 'note', id: t.dataset.id }; renderStudio(); break;
     case 'studioback': S.studio = { view: 'home' }; renderStudio(); break;
     case 'delnote': if (confirm('Delete this note?')) { nb.notes = nb.notes.filter((n) => n.id !== t.dataset.id); S.studio = { view: 'home' }; save(); renderStudio(); } break;
     case 'copynote': navigator.clipboard.writeText(plain(nb.notes.find((n) => n.id === t.dataset.id).data)).then(() => toast('Copied')); break;
@@ -956,13 +937,6 @@ document.addEventListener('click', async (e) => {
       break;
     }
     case 'retryquiz': { const note = nb.notes.find((n) => n.id === t.dataset.id); note.answers = {}; save(); renderStudio(); break; }
-    case 'flip': S.fc.flip = !S.fc.flip; $('.fc').classList.toggle('flip', S.fc.flip); break;
-    case 'fcprev': S.fc = { i: Math.max(0, S.fc.i - 1), flip: false }; renderStudio(); break;
-    case 'fcnext': S.fc = { i: S.fc.i + 1, flip: false }; renderStudio(); break;
-    case 'fcshuffle': {
-      const note = nb.notes.find((n) => n.id === t.dataset.id);
-      note.data.cards.sort(() => Math.random() - 0.5); S.fc = { i: 0, flip: false }; save(); renderStudio(); break;
-    }
     case 'mmtog': e.stopPropagation(); t.closest('li').classList.toggle('closed'); t.textContent = t.closest('li').classList.contains('closed') ? '▸' : '▾'; break;
     case 'mmnode':
       if (e.target.closest('[data-act="mmtog"]')) break;

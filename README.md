@@ -24,7 +24,7 @@ If `.env` has no key, the app runs in **demo mode**: the whole UI works, but ans
 | | Upload or record audio of teachings or lectures | Monlam STT |
 | | "From a topic": Melong writes a study document (labelled AI-generated) | Melong |
 | **Chat** | Answers only from the selected sources, with clickable source citations. Includes a notebook overview, suggested questions, voice questions, save-to-note and read-aloud | Melong, STT, TTS |
-| **Studio** | Audio overview (two-host script read aloud with a synced transcript), Summary, Study guide, Briefing doc, FAQ, Timeline, Glossary, an interactive Quiz with score, Flashcards (flip/shuffle) and a Mind map (click a node to ask about it) | Melong, TTS |
+| **Studio** | Audio overview (two-host script read aloud with a synced transcript), Summary, Study guide, Glossary, an interactive Quiz with score, and a Mind map (click a node to ask about it) | Melong, TTS |
 
 A Tibetan / English switch in the top bar sets the language of AI answers. There's also light and dark mode, and a mobile layout.
 

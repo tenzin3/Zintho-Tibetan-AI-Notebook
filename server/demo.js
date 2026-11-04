@@ -27,16 +27,6 @@ export function generate(kind, { topic, sources }) {
           { question: 'How many vowel signs does Tibetan script have?', options: ['Two', 'Three', 'Four', 'Five'], answer: 2, explanation: 'Tibetan has four vowel signs: gigu, zhabkyu, drengbu and naro.' },
         ],
       };
-    case 'flashcards':
-      return {
-        title: 'Sample flashcards',
-        cards: [
-          { front: 'ཤེས་རབ།', back: 'Sherab — wisdom, insight' },
-          { front: 'དཔེ་ཆ།', back: 'Pecha — a traditional loose-leaf Tibetan book' },
-          { front: 'ཚེག', back: 'Tsheg — the dot that separates syllables' },
-          { front: 'ཤད།', back: 'Shad — the vertical stroke that ends a clause' },
-        ],
-      };
     case 'mindmap':
       return {
         title: first,
@@ -62,7 +52,7 @@ export function generate(kind, { topic, sources }) {
     case 'glossary':
       return `| Term | Meaning | Source |\n|---|---|---|\n| ཤེས་རབ། | wisdom | S1 |\n| སྙིང་རྗེ། | compassion | S1 |\n| དཔེ་ཆ། | traditional book | S1 |\n\n${NOTE}`;
     default: {
-      const label = { summary: 'Summary', study_guide: 'Study guide', briefing: 'Briefing doc', faq: 'FAQ', timeline: 'Timeline' }[kind] || kind;
+      const label = { summary: 'Summary', study_guide: 'Study guide' }[kind] || kind;
       return `## ${label}\n\nThis is a sample **${label.toLowerCase()}** for “${first}” [S1].\n\n- First key point from the sources [S1]\n- Second key point\n- Third key point\n\n${NOTE}`;
     }
   }

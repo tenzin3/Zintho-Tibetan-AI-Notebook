@@ -174,7 +174,7 @@ function titleFor(kind, data, topic) {
   if (data && typeof data === 'object' && data.title) return data.title;
   if (typeof data === 'string') {
     const h = data.match(/^#\s+(.+)$/m);
-    if (h && (kind === 'topic' || kind === 'briefing')) return h[1].trim();
+    if (h && kind === 'topic') return h[1].trim();
   }
   if (kind === 'topic') return topic;
   return prompts.KINDS[kind]?.label || kind;

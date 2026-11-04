@@ -49,26 +49,6 @@ export const KINDS = {
 ## Essay questions — 3 questions
 ## Answer key — short answers to the short-answer questions`,
   },
-  briefing: {
-    label: 'Briefing doc', json: false,
-    prompt: `Write a briefing document in Markdown:
-# a title
-## Executive summary
-## Main themes — each theme with explanation and supporting details, citing sources like [S1]
-## Key quotes — quoted exactly from the sources
-## Conclusion`,
-  },
-  faq: {
-    label: 'FAQ', json: false,
-    prompt: 'Write 8–10 frequently asked questions a reader would ask about these sources. Format each as "### question" followed by a concise answer that cites sources like [S1]. Use Markdown.',
-  },
-  timeline: {
-    label: 'Timeline', json: false,
-    prompt: `Extract a chronological timeline from the sources. Markdown:
-## Timeline — bullets formatted as "- **date or period** — event [S#]"
-## People — one line about each important person
-If the sources contain no dates, list the events or ideas in the order they appear and say there are no explicit dates.`,
-  },
   glossary: {
     label: 'Glossary', json: false,
     prompt: 'Build a glossary of 10–20 important or difficult terms from the sources as a Markdown table with the columns | Term | Meaning | Source |. Keep Tibetan terms in Tibetan script. In the Source column write S1, S2, etc.',
@@ -78,11 +58,6 @@ If the sources contain no dates, list the events or ideas in the order they appe
     prompt: `Create a multiple-choice quiz with 10 questions that test real understanding of the sources. ${JSON_RULE}
 {"title": "...", "questions": [{"question": "...", "options": ["...", "...", "...", "..."], "answer": 0, "explanation": "..."}]}
 "answer" is the 0-based index of the correct option. Wrong options must be plausible. The explanation says why the answer is right, citing the source like [S1].`,
-  },
-  flashcards: {
-    label: 'Flashcards', json: true,
-    prompt: `Create 15 flashcards for the most important terms, ideas, people and facts in the sources. ${JSON_RULE}
-{"title": "...", "cards": [{"front": "term or question", "back": "definition or answer"}]}`,
   },
   mindmap: {
     label: 'Mind map', json: true,
@@ -146,10 +121,6 @@ export function normalize(kind, d) {
       return { question: String(q.question || q.q || ''), options, answer: Number(answer) || 0, explanation: String(q.explanation || '') };
     }).filter((q) => q.question && q.options.length >= 2);
     return { title: d.title || KINDS.quiz.label, questions: qs };
-  }
-  if (kind === 'flashcards') {
-    const cards = (Array.isArray(d) ? d : d.cards || []).map((c) => ({ front: String(c.front ?? c.term ?? c.q ?? ''), back: String(c.back ?? c.definition ?? c.a ?? '') })).filter((c) => c.front);
-    return { title: d.title || KINDS.flashcards.label, cards };
   }
   if (kind === 'mindmap') {
     const fix = (n) => ({ title: String(n.title ?? n.label ?? n.name ?? ''), children: (n.children || []).map(fix) });
