@@ -2,6 +2,29 @@
 
 A NotebookLM-style study notebook for Tibetan, powered by Monlam AI.
 
+**🌐 Try it live: [zintho.vercel.app](https://zintho.vercel.app/)**
+
+Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, glossaries, quizzes, mind maps and Tibetan audio overviews.
+
+### You need a Monlam API key
+
+Zintho runs on the [Monlam AI](https://monlam.ai) models. Each user brings their own key:
+
+1. Sign in to **Monlam Studio** and open **API keys** to create a key.
+2. Open [zintho.vercel.app](https://zintho.vercel.app/), click **⚙ Settings** and paste the key.
+3. Click **Save key**. Zintho tests the connection for you.
+
+Your key is saved **only in your browser** and sent with your own requests to Monlam. It is never stored on the server. Without a key, Zintho runs in demo mode with sample answers.
+
+| Feature | Monlam model |
+|---|---|
+| Chat, summaries, study guides, glossary, quiz, mind map | Melong (`melong-2.5`) |
+| Scanned pages and images → text | Monlam OCR (`monlam-ocr`) |
+| Audio and recordings → text | Monlam speech-to-text (`monlamai-stt`) |
+| Read-aloud and audio overviews (Lhasa, Amdo and Kham voices) | Monlam text-to-speech (`monlamai-tts`) |
+
+Monlam API reference: [api-v1.monlamai.studio/docs](https://api-v1.monlamai.studio/docs). Usage counts toward your own Monlam account's limits (for example, 1,000 requests per day).
+
 ## Run it on your computer
 
 You need **Node.js 18 or newer** (https://nodejs.org). There's nothing else to install, because the app has no npm dependencies.
