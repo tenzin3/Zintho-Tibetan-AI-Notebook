@@ -520,7 +520,7 @@ async function generate(kind) {
 }
 
 /* ================= TTS player ================= */
-function chunkText(text, max = 280) {
+function chunkText(text, max = 500) {
   const parts = plain(text).split(/(?<=[།༎\.\!\?\n])\s*/).filter((p) => p.trim());
   const out = []; let cur = '';
   for (const p of parts) {

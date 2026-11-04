@@ -20,7 +20,9 @@ const PORT = Number(process.env.PORT || 4747);
 const PUBLIC = path.join(ROOT, 'public');
 const DATA = path.join(ROOT, 'data', 'notebooks');
 const MAX_CONTEXT_CHARS = Number(process.env.MAX_CONTEXT_CHARS || 200000);
+const TTS_CACHE = path.join(ROOT, 'data', 'tts-cache');
 await mkdir(DATA, { recursive: true });
+await mkdir(TTS_CACHE, { recursive: true });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -162,7 +164,20 @@ async function handleApi(req, res, url) {
     const { text, voice } = await readBody(req);
     if (!text) return json(res, 400, { error: 'Missing text' });
     if (monlam.isDemo()) return json(res, 503, { error: 'Read-aloud needs your Monlam API key (demo mode). Add it to .env and restart.' });
-    const { buffer, contentType } = await monlam.tts(text.slice(0, 2000), voice);
+    // Cache audio on disk so replays don't use API requests
+    const clean = text.slice(0, 2000);
+    const voiceName = monlam.publicConfig().voices[voice] || voice || monlam.publicConfig().voices.A;
+    const hash = crypto.createHash('sha1').update(`${voiceName}|${clean}`).digest('hex');
+    const cacheFile = path.join(TTS_CACHE, `${hash}.audio`);
+    if (existsSync(cacheFile)) {
+      const buf = await readFile(cacheFile);
+      const type = existsSync(cacheFile + '.type') ? await readFile(cacheFile + '.type', 'utf8') : 'audio/wav';
+      res.writeHead(200, { 'Content-Type': type, 'Content-Length': buf.length });
+      return res.end(buf);
+    }
+    const { buffer, contentType } = await monlam.tts(clean, voice);
+    await writeFile(cacheFile, buffer).catch(() => {});
+    await writeFile(cacheFile + '.type', contentType).catch(() => {});
     res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': buffer.length });
     return res.end(buffer);
   }

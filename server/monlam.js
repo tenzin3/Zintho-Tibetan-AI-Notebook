@@ -59,6 +59,9 @@ async function call(pathname, init) {
   }
   if (!res.ok) {
     const body = (await res.text()).slice(0, 400);
+    if (res.status === 429 && /per day/i.test(body)) {
+      throw Object.assign(new Error('Monlam daily request limit reached (1,000 per day for your organization). Try again tomorrow, or check Usage and Rate limits in Monlam Studio.'), { status: 429 });
+    }
     const hint = res.status === 401 || res.status === 403 ? ' — check MONLAM_API_KEY in .env'
       : res.status === 402 ? ' — out of credits? Check Usage in Monlam Studio'
       : res.status === 404 ? ' — check the endpoint path in .env'
