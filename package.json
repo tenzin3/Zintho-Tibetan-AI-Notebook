@@ -1,0 +1,12 @@
+{
+  "name": "zintho-tibetan-ai-notebook",
+  "version": "0.1.0",
+  "description": "Zintho (ཟིན་ཐོ།) — a Tibetan AI study notebook powered by Monlam AI",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  }
+}
