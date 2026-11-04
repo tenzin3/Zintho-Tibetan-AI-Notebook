@@ -12,7 +12,54 @@ A NotebookLM-style study notebook for Tibetan, powered by Monlam AI.
 
 Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, glossaries, quizzes, mind maps, infographics, slide decks and Tibetan audio overviews.
 
-### You need a Monlam API key
+## Features
+
+### 📥 Add any kind of source
+- **Paste text** in Tibetan or English, or upload `.txt` / `.md` files
+- **PDFs**: the text layer is read directly, and **scanned pages are read with Monlam OCR**
+- **Images** of pechas, books or notes → text with **Monlam OCR**
+- **Audio**: upload recordings of teachings or lectures, or **record in the app**, transcribed with **Monlam speech-to-text**
+- **From a topic**: no document? Melong writes a study document for you, clearly labelled *AI-generated*
+- Tick or untick sources to choose which ones the AI uses
+
+### 💬 Chat with your sources
+- Answers come **only from your selected sources**, never from guesswork
+- **Clickable citations** on every answer open the exact source it came from
+- A **notebook overview** and **suggested questions** appear as soon as you add sources
+- **Ask by voice**: speak your question and it's transcribed
+- **Save** any answer as a note, copy it, or **read it aloud**
+
+### 🎓 Studio: turn sources into study material
+| Tool | What you get |
+|---|---|
+| 🎧 **Audio overview** | A two-host conversation about your sources, spoken with Tibetan voices, with a transcript that follows along |
+| 📝 **Summary** | A short overview and the key points |
+| 📖 **Study guide** | Key concepts, terms, short-answer and essay questions, with an answer key |
+| 📚 **Glossary** | Important Tibetan terms with their meanings |
+| ✅ **Quiz** | Multiple-choice questions with explanations and a score; retry anytime |
+| 🧠 **Mind map** | The whole text as a tree; click any topic to ask about it in chat |
+| 🖼️ **Infographic** | A one-page visual summary with key numbers, points and a timeline, **downloadable as PNG** |
+| 📊 **Slide deck** | 7–10 slides with speaker notes; **present full screen**, or download as **PowerPoint** or **PDF** |
+
+You can also write your own notes alongside the generated ones.
+
+### 🔊 Listen in Tibetan
+- **Read aloud** any answer, note or source with Monlam text-to-speech
+- Six voices: **Lhasa, Amdo and Kham**, female and male
+- Audio you've already played is saved in your browser, so replays are free
+
+### 🏔️ Made for Tibetan
+- Tibetan-first design with proper Tibetan fonts
+- Switch AI answers between **བོད་ཡིག** and **English** with one click
+- Infographics and slides use real Tibetan text, never garbled AI-drawn letters
+
+### 🔒 Private and simple
+- **Bring your own Monlam API key**: it's stored only in your browser
+- Notebooks are saved **in your browser**, not on a server
+- Works on desktop and phone, in light or dark mode
+- No sign-up, and no install needed to use [zintho.vercel.app](https://zintho.vercel.app/)
+
+## Get started: your Monlam API key
 
 Zintho runs on the Monlam AI models, available through [Monlam AI Studio](https://monlamai.studio/). Each user brings their own key:
 
@@ -43,35 +90,6 @@ npm start                 # open http://localhost:4747
 On a Mac you can also double-click **start.command**.
 
 **API key:** click **⚙ Settings** in the app and paste your Monlam key. It's saved only in your browser. Alternatively, put it in `.env` as `MONLAM_API_KEY=...` and it will be used whenever no key is set in the browser. With no key at all, the app runs in **demo mode** with sample answers.
-
-## Deploy to Vercel
-
-The repo is ready for Vercel: `public/` is served as the website and `api/[route].js` runs the AI routes.
-
-1. Push this folder to GitHub (`git add . && git commit -m "Zintho" && git push`).
-2. Go to https://vercel.com/new and import the `Zintho-Tibetan-AI-Notebook` repo.
-3. Leave the settings as they are (Framework preset: **Other**; `vercel.json` handles the rest) and click **Deploy**.
-4. Open the site, click **⚙ Settings** and paste your Monlam key.
-
-**Don't add `MONLAM_API_KEY` in Vercel's Environment Variables** unless you want everyone who visits the site to use your key and your 1,000 daily requests. Without it, each visitor uses their own key from Settings.
-
-On the hosted version:
-- Notebooks are saved in each visitor's browser (IndexedDB), not on a server. Clearing browser data deletes them.
-- Uploads are limited to **3 MB per file** (a Vercel limit). PDFs are sent page by page, so long PDFs are fine. Long audio recordings must be split. Run Zintho locally for bigger files.
-
-## Features
-
-| Panel | What it does | Monlam model |
-|---|---|---|
-| **Sources** | Paste text; upload .txt/.md; PDFs (text layer, and scanned pages are OCR'd automatically); images | Monlam OCR |
-| | Upload or record audio of teachings or lectures | Monlam STT |
-| | "From a topic": Melong writes a study document (labelled AI-generated) | Melong |
-| **Chat** | Answers only from the selected sources, with clickable source citations. Includes a notebook overview, suggested questions, voice questions, save-to-note and read-aloud | Melong, STT, TTS |
-| **Studio** | Audio overview (two-host script read aloud with a synced transcript), Summary, Study guide, Glossary, an interactive Quiz with score, a Mind map (click a node to ask about it), an **Infographic** (download as PNG) and a **Slide deck** (present full screen, download as PowerPoint or PDF) | Melong, TTS |
-
-A Tibetan / English switch in the top bar sets the language of AI answers. There's also light and dark mode, and a mobile layout.
-
-Notebooks and audio you've already played are saved in your browser (IndexedDB), so replays don't use API requests.
 
 ## Connecting the Monlam API
 
