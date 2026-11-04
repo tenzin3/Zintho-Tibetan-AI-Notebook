@@ -4,6 +4,12 @@ A NotebookLM-style study notebook for Tibetan, powered by Monlam AI.
 
 **🌐 Try it live: [zintho.vercel.app](https://zintho.vercel.app/)**
 
+<p align="center">
+  <a href="demo/Zintho-demo.mp4"><img src="demo/zintho-demo.gif" alt="Zintho demo: adding sources, chatting with citations, and creating a summary, glossary, quiz, mind map and audio overview" width="900"></a>
+  <br>
+  <sub>▶ <a href="demo/Zintho-demo.mp4">Watch the full demo video (1 min, MP4)</a></sub>
+</p>
+
 Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, glossaries, quizzes, mind maps and Tibetan audio overviews.
 
 ### You need a Monlam API key

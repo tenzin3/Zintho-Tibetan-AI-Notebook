@@ -18,7 +18,7 @@
   --shadow-lg: 0 12px 40px rgba(0,0,0,.18);
   --radius: 18px;
   --font: "Inter", "Noto Sans Tibetan", "Kailasa", "Microsoft Himalaya", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-bo: "Noto Sans Tibetan", "Kailasa", "Microsoft Himalaya", "Inter", system-ui, sans-serif;
+  --font-bo: "Inter", "Noto Sans Tibetan", "Kailasa", "Microsoft Himalaya", system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
