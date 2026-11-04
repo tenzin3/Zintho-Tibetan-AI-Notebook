@@ -8,9 +8,9 @@ Add texts, scanned pechas or recorded teachings, then chat with them and turn th
 
 ### You need a Monlam API key
 
-Zintho runs on the [Monlam AI](https://monlam.ai) models. Each user brings their own key:
+Zintho runs on the Monlam AI models, available through [Monlam AI Studio](https://monlamai.studio/). Each user brings their own key:
 
-1. Sign in to **Monlam Studio** and open **API keys** to create a key.
+1. Sign in to [Monlam AI Studio](https://monlamai.studio/) and open **API keys** to create a key.
 2. Open [zintho.vercel.app](https://zintho.vercel.app/), click **⚙ Settings** and paste the key.
 3. Click **Save key**. Zintho tests the connection for you.
 
@@ -69,7 +69,7 @@ Notebooks and audio you've already played are saved in your browser (IndexedDB),
 
 ## Connecting the Monlam API
 
-Zintho uses the Monlam Studio API (full reference: https://api-v1.monlamai.studio/docs). Create a key under **API keys** in Monlam Studio, then paste it into **⚙ Settings** in the app.
+Zintho uses the Monlam Studio API (full reference: https://api-v1.monlamai.studio/docs). Create a key under **API keys** in [Monlam AI Studio](https://monlamai.studio/), then paste it into **⚙ Settings** in the app.
 
 | Feature | Request |
 |---|---|
