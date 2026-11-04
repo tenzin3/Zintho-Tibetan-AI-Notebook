@@ -10,7 +10,7 @@ A NotebookLM-style study notebook for Tibetan, powered by Monlam AI.
   <sub>▶ <a href="demo/Zintho-demo.mp4">Watch the full demo video (1 min, MP4)</a></sub>
 </p>
 
-Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, glossaries, quizzes, mind maps and Tibetan audio overviews.
+Add texts, scanned pechas or recorded teachings, then chat with them and turn them into summaries, study guides, glossaries, quizzes, mind maps, infographics, slide decks and Tibetan audio overviews.
 
 ### You need a Monlam API key
 
@@ -24,7 +24,7 @@ Your key is saved **only in your browser** and sent with your own requests to Mo
 
 | Feature | Monlam model |
 |---|---|
-| Chat, summaries, study guides, glossary, quiz, mind map | Melong (`melong-2.5`) |
+| Chat, summaries, study guides, glossary, quiz, mind map, infographic and slide content | Melong (`melong-2.5`) |
 | Scanned pages and images → text | Monlam OCR (`monlam-ocr`) |
 | Audio and recordings → text | Monlam speech-to-text (`monlamai-stt`) |
 | Read-aloud and audio overviews (Lhasa, Amdo and Kham voices) | Monlam text-to-speech (`monlamai-tts`) |
@@ -67,7 +67,7 @@ On the hosted version:
 | | Upload or record audio of teachings or lectures | Monlam STT |
 | | "From a topic": Melong writes a study document (labelled AI-generated) | Melong |
 | **Chat** | Answers only from the selected sources, with clickable source citations. Includes a notebook overview, suggested questions, voice questions, save-to-note and read-aloud | Melong, STT, TTS |
-| **Studio** | Audio overview (two-host script read aloud with a synced transcript), Summary, Study guide, Glossary, an interactive Quiz with score, and a Mind map (click a node to ask about it) | Melong, TTS |
+| **Studio** | Audio overview (two-host script read aloud with a synced transcript), Summary, Study guide, Glossary, an interactive Quiz with score, a Mind map (click a node to ask about it), an **Infographic** (download as PNG) and a **Slide deck** (present full screen, download as PowerPoint or PDF) | Melong, TTS |
 
 A Tibetan / English switch in the top bar sets the language of AI answers. There's also light and dark mode, and a mobile layout.
 
@@ -100,7 +100,8 @@ server/handlers.js   AI routes shared by both (chat, generate, ocr, stt, tts, te
 server/monlam.js     Monlam API adapter (the only file that talks to Monlam)
 server/prompts.js    prompts for chat and each Studio tool
 server/demo.js       sample answers for demo mode
-public/              the web app (index.html, styles.css, app.js)
+public/              the web app (index.html, styles.css, app.js, visuals.js)
+public/vendor/       PptxGenJS 4.0.1 (MIT) for PowerPoint export
 vercel.json          Vercel config
 ```
 

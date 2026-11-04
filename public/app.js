@@ -1,5 +1,6 @@
 // Zintho (ཟིན་ཐོ།) — Tibetan AI Notebook · frontend
 // Plain JavaScript, no build step.
+import { infographicHTML, infoLayouts, htmlToPNG, INFO_W, deckSlides, slideHTML, SLIDE_W, exportPPTX, exportPDF, safeName } from './visuals.js';
 
 /* ================= icons ================= */
 const P = (d) => `<path d="${d}"/>`;
@@ -38,6 +39,7 @@ const ICONS = {
   moon: P('M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'),
   refresh: P('M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5'),
   next: P('m9 18 6-6-6-6'), prev: P('m15 18-6-6 6-6'),
+  slides: '<rect x="2" y="3" width="20" height="14" rx="2"/>' + P('M8 21h8M12 17v4M7 8h6M7 12h10'),
   shuffle: P('M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5'),
 };
 const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -168,6 +170,8 @@ const TOOLS = [
   { kind: 'glossary', label: 'Glossary', bo: 'ཚིག་མཛོད།', icon: 'glossary' },
   { kind: 'quiz', label: 'Quiz', bo: 'འདྲི་རྩད།', icon: 'help' },
   { kind: 'mindmap', label: 'Mind map', bo: 'བསམ་བློའི་ས་ཁྲ།', icon: 'map' },
+  { kind: 'infographic', label: 'Infographic', bo: 'རི་མོའི་སྙིང་བསྡུས།', icon: 'image' },
+  { kind: 'slides', label: 'Slide deck', bo: 'གསལ་བཤད་ཤོག་ངོས།', icon: 'slides' },
 ];
 const TOOL = Object.fromEntries(TOOLS.map((t) => [t.kind, t]));
 TOOL.saved = { kind: 'saved', label: 'Saved response', icon: 'pin' };
@@ -494,6 +498,7 @@ function renderStudio() {
         <button class="icon-btn sm" data-act="delnote" data-id="${note.id}" title="Delete">${icon('trash', 'sm')}</button>
       </div>
       <div class="panel-body" id="noteBody">${renderNoteBody(note)}</div>`;
+    fitScaled(el);
     return;
   }
   const a = nb.audio;
@@ -547,6 +552,28 @@ function renderNoteBody(note) {
       </div>`;
     }).join('') + `<div class="score"><span>Score: ${correct} / ${qs.length}${answered < qs.length ? ` <span style="color:var(--faint);font-weight:400">(${qs.length - answered} left)</span>` : ''}</span>
       <button class="btn" data-act="retryquiz" data-id="${note.id}">${icon('refresh', 'sm')} Retry</button></div>`;
+  }
+  if (note.kind === 'infographic') {
+    const layouts = infoLayouts(d);
+    const layout = layouts.includes(note.layout) ? note.layout : layouts[0];
+    return `<div class="vis-actions">
+        <button class="btn accent" data-act="infopng">${icon('upload', 'sm')} Download PNG</button>
+        <button class="btn" data-act="infoopen">Open large</button>
+        ${layouts.length > 1 ? `<div class="seg">${layouts.map((l) => `<button class="${l === layout ? 'on' : ''}" data-act="infolayout" data-v="${l}">${l === 'overview' ? 'Overview' : 'Timeline'}</button>`).join('')}</div>` : ''}
+      </div>
+      <div class="vis-preview" data-fit="${INFO_W}" data-act="infoopen" title="Open large"><div class="vis-scale">${infographicHTML(d, layout)}</div></div>`;
+  }
+  if (note.kind === 'slides') {
+    const slides = deckSlides(d);
+    return `<div class="vis-actions">
+        <button class="btn accent" data-act="present" data-i="0">${icon('play', 'sm')} Present</button>
+        <button class="btn" data-act="pptx">PowerPoint</button>
+        <button class="btn" data-act="pdf">PDF</button>
+      </div>
+      <div class="slide-thumbs">${slides.map((sl, i) => `
+        <div class="slide-thumb" data-act="present" data-i="${i}" data-fit="${SLIDE_W}" title="Present from slide ${i + 1}">
+          <div class="vis-scale">${slideHTML(sl, i, slides.length)}</div></div>`).join('')}
+      </div>`;
   }
   if (note.kind === 'mindmap') {
     const tree = (n, depth) => `<li>
@@ -962,6 +989,53 @@ async function testKey() {
   }
 }
 
+/* ================= visuals: scaling + presenter ================= */
+function fitScaled(root = document) {
+  root.querySelectorAll('[data-fit]').forEach((box) => {
+    const inner = box.firstElementChild; if (!inner) return;
+    const scale = box.clientWidth / Number(box.dataset.fit);
+    inner.style.transform = `scale(${scale})`;
+    if (!box.classList.contains('slide-thumb')) box.style.height = Math.ceil(inner.offsetHeight * scale) + 'px';
+  });
+}
+window.addEventListener('resize', () => fitScaled());
+document.fonts?.ready.then(() => fitScaled());
+
+const presenter = { el: null, slides: [], i: 0, notes: false };
+function openPresenter(deck, start = 0) {
+  presenter.slides = deckSlides(deck); presenter.i = start; presenter.title = deck.title;
+  const el = document.createElement('div');
+  el.id = 'presenter'; presenter.el = el;
+  document.body.append(el);
+  el.requestFullscreen?.().catch(() => {});
+  renderPresenter();
+}
+function renderPresenter() {
+  const { el, slides, i } = presenter; if (!el) return;
+  const s = slides[i];
+  el.innerHTML = `
+    <div class="pres-stage"><div class="pres-slide" data-fit="${SLIDE_W}"><div class="vis-scale">${slideHTML(s, i, slides.length)}</div></div></div>
+    ${presenter.notes ? `<div class="pres-notes">${s.notes ? esc(s.notes) : '<i>No speaker notes for this slide.</i>'}</div>` : ''}
+    <div class="pres-bar">
+      <button class="icon-btn" data-act="pprevslide" title="Previous (←)" ${i === 0 ? 'disabled' : ''}>${icon('prev')}</button>
+      <span>${i + 1} / ${slides.length}</span>
+      <button class="icon-btn" data-act="pnextslide" title="Next (→)" ${i === slides.length - 1 ? 'disabled' : ''}>${icon('next')}</button>
+      <button class="btn ghost" data-act="pnotes">${presenter.notes ? 'Hide notes' : 'Notes'}</button>
+      ${s.notes ? `<button class="icon-btn" data-act="pspeak" title="Read notes aloud">${icon('volume')}</button>` : ''}
+      <button class="icon-btn" data-act="pclose" title="Close (Esc)">${icon('close')}</button>
+    </div>`;
+  const stage = el.querySelector('.pres-stage'), box = el.querySelector('.pres-slide');
+  const scale = Math.min(stage.clientWidth / 1280, stage.clientHeight / 720);
+  box.style.width = 1280 * scale + 'px'; box.style.height = 720 * scale + 'px';
+  fitScaled(el);
+}
+function closePresenter() {
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  presenter.el?.remove(); presenter.el = null;
+}
+window.addEventListener('resize', () => presenter.el && renderPresenter());
+const currentNote = () => S.nb?.notes.find((n) => n.id === S.studio.id);
+
 /* ================= events ================= */
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-act]');
@@ -1067,6 +1141,36 @@ document.addEventListener('click', async (e) => {
       else player.start(nb.audio.lines.map((l) => l.text), { label: nb.audio.title, kind: 'overview', voices: nb.audio.lines.map((l) => l.speaker) });
       break;
     case 'playline': player.start(nb.audio.lines.map((l) => l.text), { label: nb.audio.title, kind: 'overview', from: Number(t.dataset.i), voices: nb.audio.lines.map((l) => l.speaker) }); break;
+    case 'infolayout': { const note = currentNote(); note.layout = t.dataset.v; save(); renderStudio(); break; }
+    case 'infoopen': {
+      const note = currentNote(); const layouts = infoLayouts(note.data);
+      const layout = layouts.includes(note.layout) ? note.layout : layouts[0];
+      openModal(note.title, `<div class="vis-preview big" data-fit="${INFO_W}"><div class="vis-scale">${infographicHTML(note.data, layout)}</div></div>
+        <div class="row-end"><button class="btn accent" data-act="infopng">${icon('upload', 'sm')} Download PNG</button></div>`, (root) => fitScaled(root));
+      break;
+    }
+    case 'infopng': {
+      const note = currentNote(); const layouts = infoLayouts(note.data);
+      const layout = layouts.includes(note.layout) ? note.layout : layouts[0];
+      t.disabled = true; const label = t.innerHTML; t.innerHTML = '<span class="spin"></span> Preparing…';
+      try { await htmlToPNG(infographicHTML(note.data, layout), INFO_W, `${safeName(note.title)}.png`); toast('Infographic downloaded'); }
+      catch (er) { toast(er.message, 'error'); }
+      t.disabled = false; t.innerHTML = label;
+      break;
+    }
+    case 'present': openPresenter(currentNote().data, Number(t.dataset.i) || 0); break;
+    case 'pptx': {
+      const note = currentNote(); t.disabled = true;
+      try { await exportPPTX(note.data, `${safeName(note.title)}.pptx`); toast('PowerPoint downloaded'); }
+      catch (er) { toast(er.message, 'error'); }
+      t.disabled = false; break;
+    }
+    case 'pdf': toast('In the print window, choose “Save as PDF”'); exportPDF(currentNote().data); break;
+    case 'pprevslide': if (presenter.i > 0) { presenter.i--; renderPresenter(); } break;
+    case 'pnextslide': if (presenter.i < presenter.slides.length - 1) { presenter.i++; renderPresenter(); } break;
+    case 'pnotes': presenter.notes = !presenter.notes; renderPresenter(); break;
+    case 'pspeak': speak(presenter.slides[presenter.i].notes, `Slide ${presenter.i + 1} notes`); break;
+    case 'pclose': closePresenter(); break;
     case 'toggletranscript': S.showTranscript = !S.showTranscript; renderStudio(); if (player.isAudioOverview()) player.render(); break;
 
     // player
@@ -1090,6 +1194,13 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (presenter.el) {
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); if (presenter.i < presenter.slides.length - 1) { presenter.i++; renderPresenter(); } }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); if (presenter.i > 0) { presenter.i--; renderPresenter(); } }
+    else if (e.key === 'Escape') closePresenter();
+    else if (e.key.toLowerCase() === 'n') { presenter.notes = !presenter.notes; renderPresenter(); }
+    return;
+  }
   if (e.key === 'Escape' && $('#modal-root').innerHTML && !recorder.on) closeModal();
   if (e.key === 'Enter' && e.target.matches('.nb-card[data-act="open"]')) location.hash = `#/nb/${e.target.dataset.id}`;
 });

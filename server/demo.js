@@ -37,6 +37,28 @@ export function generate(kind, { topic, sources }) {
           { title: 'Questions to explore', children: [] },
         ],
       };
+    case 'infographic':
+      return {
+        title: 'Sample infographic', subtitle: `A one-page overview of “${first}”. With your Monlam key, Melong fills this from your sources.`,
+        stats: [{ value: '30', label: 'consonants' }, { value: '4', label: 'vowel signs' }, { value: '7th', label: 'century' }],
+        points: [
+          { icon: 'person', heading: 'Who', text: 'The key people mentioned in your sources appear here.' },
+          { icon: 'lightbulb', heading: 'Main idea', text: 'The central idea of the text, in one short sentence.' },
+          { icon: 'book', heading: 'Key terms', text: 'Important Tibetan words such as ཚེག and ཤད།.' },
+          { icon: 'globe', heading: 'Why it matters', text: 'The wider meaning or influence of the topic.' },
+        ],
+        timeline: [{ when: 'Step 1', what: 'First event' }, { when: 'Step 2', what: 'Second event' }, { when: 'Step 3', what: 'Third event' }],
+        quote: null, takeaway: 'Demo mode: add your Monlam API key in Settings to generate a real infographic.',
+      };
+    case 'slides':
+      return {
+        title: `Slides: ${first}`, subtitle: 'Sample deck (demo mode)',
+        slides: [
+          { type: 'bullets', title: 'Overview', bullets: ['What the sources are about', 'The main ideas', 'Why it matters'], notes: 'In demo mode these slides are placeholders. With your key, Melong writes real slides from your sources.' },
+          { type: 'terms', title: 'Key terms', terms: [{ term: 'ཚེག', meaning: 'tsheg, the dot between syllables' }, { term: 'ཤད།', meaning: 'shad, the stroke that ends a clause' }], notes: 'Key terms with their meanings.' },
+          { type: 'summary', title: 'Summary', bullets: ['Point one', 'Point two', 'Point three'], notes: 'A short recap.' },
+        ],
+      };
     case 'audio':
       return {
         title: 'Sample audio overview',

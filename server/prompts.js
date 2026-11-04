@@ -64,6 +64,19 @@ export const KINDS = {
     prompt: `Create a mind map of the sources: one central topic, 4–7 main branches, up to 3 levels deep. Labels must be short (at most 6 words). ${JSON_RULE}
 {"title": "central topic", "children": [{"title": "main branch", "children": [{"title": "detail", "children": []}]}]}`,
   },
+  infographic: {
+    label: 'Infographic', json: true,
+    prompt: `Create the content for a one-page infographic that explains the sources at a glance. Be concise: headings of at most 5 words, point texts of at most 18 words. ${JSON_RULE}
+{"title": "short title", "subtitle": "one sentence on what this is about", "stats": [{"value": "30", "label": "consonants"}], "points": [{"icon": "book", "heading": "...", "text": "..."}], "timeline": [{"when": "7th century", "what": "..."}], "quote": {"text": "...", "source": "..."}, "takeaway": "one-sentence key message"}
+Rules: "stats" has 0–3 items, only numbers that appear in the sources. "points" has 4–6 items. "timeline" has 0–6 items, only if the sources mention dates or a clear sequence, otherwise []. "quote" is an exact short quote from the sources, or null. "icon" must be one of: book, scroll, person, people, mountain, temple, lightbulb, star, globe, clock, chat, heart, pen, language, flag, leaf.`,
+  },
+  slides: {
+    label: 'Slide deck', json: true,
+    prompt: `Create a slide deck that teaches the sources clearly, with 7–10 slides. ${JSON_RULE}
+{"title": "deck title", "subtitle": "one-line subtitle", "slides": [{"type": "bullets", "title": "slide title", "bullets": ["...", "..."], "notes": "what the presenter says, 2–3 sentences"}]}
+Slide types: "bullets" (3–5 short bullets, at most 14 words each), "terms" (use "terms": [{"term": "...", "meaning": "..."}] with 3–6 items instead of bullets), "quote" (use "quote": "exact quote from the sources" and "source": "..."), "summary" (the last slide: 3–4 key takeaways as bullets).
+Start with an overview slide (type "bullets"), end with a "summary" slide. Do not include a title slide; it is added automatically. Every slide needs "notes".`,
+  },
   audio: {
     label: 'Audio overview', json: true,
     prompt: `Write the script for an engaging 3–5 minute audio overview of the sources: a warm, natural conversation between two hosts, A and B, who explain the main ideas to a listener. A introduces and asks good questions; B explains with examples from the sources. Use 16–24 short turns, with no stage directions and no citations. ${JSON_RULE}
@@ -125,6 +138,32 @@ export function normalize(kind, d) {
   if (kind === 'mindmap') {
     const fix = (n) => ({ title: String(n.title ?? n.label ?? n.name ?? ''), children: (n.children || []).map(fix) });
     return fix(d);
+  }
+  if (kind === 'infographic') {
+    const ICONS = ['book', 'scroll', 'person', 'people', 'mountain', 'temple', 'lightbulb', 'star', 'globe', 'clock', 'chat', 'heart', 'pen', 'language', 'flag', 'leaf'];
+    const str = (v) => (v == null ? '' : String(v));
+    return {
+      title: str(d.title) || KINDS.infographic.label,
+      subtitle: str(d.subtitle),
+      stats: (d.stats || []).map((x) => ({ value: str(x.value), label: str(x.label) })).filter((x) => x.value).slice(0, 3),
+      points: (d.points || []).map((x) => ({ icon: ICONS.includes(x.icon) ? x.icon : 'star', heading: str(x.heading ?? x.title), text: str(x.text ?? x.description) })).filter((x) => x.heading || x.text).slice(0, 6),
+      timeline: (d.timeline || []).map((x) => ({ when: str(x.when ?? x.date), what: str(x.what ?? x.event) })).filter((x) => x.what).slice(0, 6),
+      quote: d.quote && (d.quote.text || typeof d.quote === 'string') ? { text: str(d.quote.text ?? d.quote), source: str(d.quote.source) } : null,
+      takeaway: str(d.takeaway),
+    };
+  }
+  if (kind === 'slides') {
+    const str = (v) => (v == null ? '' : String(v));
+    const slides = (d.slides || []).map((x) => {
+      const type = ['bullets', 'terms', 'quote', 'summary'].includes(x.type) ? x.type : 'bullets';
+      return {
+        type, title: str(x.title),
+        bullets: (x.bullets || x.points || []).map(str).filter(Boolean).slice(0, 6),
+        terms: (x.terms || []).map((t) => ({ term: str(t.term), meaning: str(t.meaning ?? t.definition) })).filter((t) => t.term).slice(0, 6),
+        quote: str(x.quote), source: str(x.source), notes: str(x.notes),
+      };
+    }).filter((x) => x.title || x.bullets.length || x.terms.length || x.quote).slice(0, 12);
+    return { title: str(d.title) || KINDS.slides.label, subtitle: str(d.subtitle), slides };
   }
   if (kind === 'audio') {
     const lines = (Array.isArray(d) ? d : d.lines || []).map((l, i) => ({ speaker: (l.speaker || (i % 2 ? 'B' : 'A')).toString().toUpperCase().startsWith('B') ? 'B' : 'A', text: String(l.text || l.line || '') })).filter((l) => l.text);

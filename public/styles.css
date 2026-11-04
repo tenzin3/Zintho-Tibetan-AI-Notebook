@@ -358,3 +358,22 @@ a { color: var(--accent); }
   .home { padding: 12px 16px 60px; }
   .player .label { max-width: 140px; }
 }
+
+/* infographic + slides */
+.vis-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.vis-actions .btn { padding: 7px 14px; font-size: 13px; }
+.vis-preview { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); background: #fff; cursor: zoom-in; }
+.vis-preview.big { cursor: default; margin-bottom: 8px; }
+.vis-scale { position: absolute; left: 0; top: 0; transform-origin: top left; pointer-events: none; }
+.slide-thumbs { display: grid; gap: 10px; }
+.slide-thumb { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; background: #fff; }
+.slide-thumb:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+#presenter { position: fixed; inset: 0; z-index: 80; background: #0d0d0e; display: flex; flex-direction: column; }
+.pres-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; }
+.pres-slide { position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.pres-notes { flex: none; max-height: 22vh; overflow: auto; margin: 0 auto 8px; width: min(900px, calc(100% - 32px)); background: #1e1f20; color: #e8eaed; border-radius: 12px; padding: 12px 16px; font-size: 15px; line-height: 1.7; }
+.pres-bar { flex: none; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 16px 16px; color: #e8eaed; font-size: 14px; }
+.pres-bar .icon-btn, .pres-bar .btn { color: #e8eaed; }
+.pres-bar .icon-btn:hover, .pres-bar .btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+.pres-bar .btn { border-color: transparent; background: transparent; }
+.pres-bar .icon-btn:disabled { opacity: .35; }
